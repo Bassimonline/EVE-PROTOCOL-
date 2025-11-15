@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import Panel from './Panel';
@@ -57,7 +56,7 @@ const SentimentMeter: React.FC<SentimentMeterProps> = ({ tokens, onTokenSelect }
             setError(null);
             
             try {
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_API_KEY });
                 
                 const responseSchema = {
                   type: Type.OBJECT,

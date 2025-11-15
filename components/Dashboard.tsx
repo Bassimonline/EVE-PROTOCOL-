@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import TrendingTokens from './TrendingTokens';
 import NeuralIndex from './NeuralIndex';
@@ -24,11 +23,11 @@ const Dashboard: React.FC = () => {
     setAllTokens(prevTokens => {
       const updatedTokens = new Map(prevTokens);
       newTokens.forEach(token => {
-        // FIX: Spreading 'existingToken' when it is 'undefined' causes a "Spread types may only be created from object types" error.
-        // Using `has` to check for the token's existence before getting and spreading it prevents this runtime error.
-        if (updatedTokens.has(token.address)) {
-          // We can safely use the non-null assertion operator (!) because we've confirmed the key exists.
-          const existingToken = updatedTokens.get(token.address)!;
+        // FIX: Corrected a potential runtime error. The spread operator `...` cannot be used
+        // on an `undefined` value. An explicit check is necessary to ensure `existingToken`
+        // exists before attempting to merge its properties.
+        const existingToken = updatedTokens.get(token.address);
+        if (existingToken) {
           updatedTokens.set(token.address, { ...existingToken, ...token });
         } else {
           updatedTokens.set(token.address, token);

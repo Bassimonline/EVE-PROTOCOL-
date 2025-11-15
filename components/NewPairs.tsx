@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Token, JupiterToken, JupiterV3PriceResponse } from '../types';
 import Panel from './Panel';
@@ -32,7 +31,7 @@ const TokenRow: React.FC<TokenRowProps> = ({ token, onSelect, isNew }) => {
     <tr 
       className={`
         border-b border-eve-border/50 last:border-b-0 hover:bg-eve-border/20 cursor-pointer transition-all duration-500
-        ${isNew ? 'animate-shake bg-yellow-500/10 border-l-2 border-l-yellow-400' : 'border-l-2 border-l-transparent'}
+        ${isNew ? 'animate-shake bg-yellow-400/20 border-l-4 border-l-yellow-400' : 'border-l-4 border-l-transparent'}
       `}
       onClick={() => onSelect(token)}
     >
@@ -142,13 +141,28 @@ const NewPairs: React.FC<NewPairsProps> = ({ onTokenSelect, onDataFetched }) => 
         }
         
         const currentTokenAddresses = new Set(initialTokens.map(t => t.address));
+        
         // Only highlight new tokens on subsequent fetches, not the initial load
         if (prevTokenAddressesRef.current.size > 0) {
             const newlyAdded = new Set([...currentTokenAddresses].filter(addr => !prevTokenAddressesRef.current.has(addr)));
+            
             if (newlyAdded.size > 0) {
-                setNewTokens(newlyAdded);
-                // Clear the highlight after a few seconds
-                setTimeout(() => setNewTokens(new Set()), 5000);
+                const newlyAddedArray = Array.from(newlyAdded);
+                newlyAddedArray.forEach((address, index) => {
+                    // Stagger adding the 'new' state
+                    setTimeout(() => {
+                        setNewTokens(prev => new Set(prev).add(address));
+                        
+                        // Schedule removal of the 'new' state for this specific token
+                        setTimeout(() => {
+                            setNewTokens(prev => {
+                                const next = new Set(prev);
+                                next.delete(address);
+                                return next;
+                            });
+                        }, 4000); // Highlight lasts for 4 seconds
+                    }, index * 500); // Stagger animations by 500ms
+                });
             }
         }
         prevTokenAddressesRef.current = currentTokenAddresses;
@@ -167,7 +181,7 @@ const NewPairs: React.FC<NewPairsProps> = ({ onTokenSelect, onDataFetched }) => 
     fetchData();
      const interval = setInterval(fetchData, 2 * 60 * 1000); // Refresh every 2 minutes
     return () => clearInterval(interval);
-  }, [onDataFetched, tokens.length]);
+  }, [onDataFetched]);
 
 
   return (

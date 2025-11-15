@@ -258,7 +258,7 @@ const TokenDetail: React.FC<TokenDetailProps> = ({ token, onClose }) => {
         };
 
         const aiPromise = (async () => {
-          const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+          const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_API_KEY });
           const prompt = `You are an AI crypto market analyst for the EVE Protocol terminal. Your responses must be grounded in real, verifiable information from Google Search. Analyze the Solana token with the name "${token.name}" and ticker symbol "$${token.ticker}". The token address is ${token.address}. Based on recent public information found via Google Search, provide the following. Return the data as a single JSON object. Do not include any text outside of the JSON object.
 - sentiment: An object with 'score' (number 0-100 based on overall market sentiment), 'label' (string, e.g., 'Positive', 'Neutral'), and 'summary' (a short string summarizing the current sentiment based on recent news and social media).
 - news: An array of 2 recent, relevant news articles. Each object must have 'source' (the real news source name), 'title' (the real article title), 'time' (a relative time string), and a real, direct 'url' to the article.
@@ -318,7 +318,7 @@ const TokenDetail: React.FC<TokenDetailProps> = ({ token, onClose }) => {
               <span className="font-semibold">{token.name} ({token.ticker})</span>
           </div>
           <button onClick={onClose} className="text-eve-text-secondary hover:text-white transition-colors z-20">
-              <svg xmlns="http://www.w.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
           </button>
