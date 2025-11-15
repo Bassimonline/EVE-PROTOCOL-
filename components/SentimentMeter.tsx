@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import Panel from './Panel';
 import { Token } from '../types';
 
@@ -58,6 +58,36 @@ const SentimentMeter: React.FC<SentimentMeterProps> = ({ tokens, onTokenSelect }
             
             try {
                 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                
+                const responseSchema = {
+                  type: Type.OBJECT,
+                  properties: {
+                    opportunities: {
+                      type: Type.ARRAY,
+                      description: "An array of the top 3 token opportunities.",
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          tokenAddress: {
+                            type: Type.STRING,
+                            description: "The address of the selected token."
+                          },
+                          reasoning: {
+                            type: Type.STRING,
+                            description: "A single, compelling sentence explaining why this token is a top opportunity."
+                          },
+                          opportunityType: {
+                            type: Type.STRING,
+                            description: "A short, descriptive label for the potential trend (e.g., 'Momentum Play', 'New Gem', 'Potential Reversal')."
+                          },
+                        },
+                        required: ['tokenAddress', 'reasoning', 'opportunityType'],
+                      },
+                    },
+                  },
+                  required: ['opportunities'],
+                };
+
                 const tokenDataString = tokens
                     .slice(0, 30) 
                     .map(t => `- ${t.name} ($${t.ticker}): 24h Change ${t.change24h.toFixed(2)}%, Created: ${t.createdAt ? timeSince(t.createdAt) + ' ago' : 'N/A'}, Address: ${t.address}`)
@@ -69,46 +99,25 @@ Prioritize tokens that exhibit a strong combination of high positive momentum (2
 Token Data:
 ${tokenDataString}
 
-Your analysis must be concise and actionable. Return ONLY a single JSON object containing an array named "opportunities" with exactly 3 token objects. Do not include any other text, markdown, or explanations. Each object in the array must have the following structure:
-
-{
-  "opportunities": [
-    {
-      "tokenAddress": "The address of the first selected token.",
-      "reasoning": "A single, compelling sentence explaining *why* this token is a top opportunity. Example: 'Exhibits explosive 24-hour momentum while still being a relatively new launch.'",
-      "opportunityType": "A short, descriptive label for the potential trend (e.g., 'Momentum Play', 'New Gem', 'Potential Reversal')."
-    },
-    {
-      "tokenAddress": "The address of the second selected token.",
-      "reasoning": "...",
-      "opportunityType": "..."
-    },
-    {
-      "tokenAddress": "The address of the third selected token.",
-      "reasoning": "...",
-      "opportunityType": "..."
-    }
-  ]
-}`;
+Based on the data, select exactly 3 tokens and provide the requested analysis for each.`;
                 
                 const response = await ai.models.generateContent({
                   model: "gemini-2.5-flash",
                   contents: prompt,
+                  config: {
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema,
+                  },
                 });
 
                 const rawText = response.text;
-                const jsonStartIndex = rawText.indexOf('{');
-                const jsonEndIndex = rawText.lastIndexOf('}');
-                if (jsonStartIndex === -1 || jsonEndIndex === -1) throw new Error("AI response did not contain valid JSON.");
-                const jsonString = rawText.substring(jsonStartIndex, jsonEndIndex + 1);
-                
-                const result: { opportunities: TopOpportunity[] } = JSON.parse(jsonString);
+                const result: { opportunities: TopOpportunity[] } = JSON.parse(rawText);
 
-                if (result.opportunities && result.opportunities.length === 3) {
-                    setOpportunities(result.opportunities);
+                if (result.opportunities && result.opportunities.length >= 3) {
+                    setOpportunities(result.opportunities.slice(0, 3));
                     analyzedTokensRef.current = currentTokenSignature;
                 } else {
-                    throw new Error("AI did not return 3 opportunities.");
+                    throw new Error("AI did not return at least 3 opportunities.");
                 }
 
             } catch (err) {

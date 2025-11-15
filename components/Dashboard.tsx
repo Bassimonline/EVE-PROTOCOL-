@@ -24,10 +24,11 @@ const Dashboard: React.FC = () => {
     setAllTokens(prevTokens => {
       const updatedTokens = new Map(prevTokens);
       newTokens.forEach(token => {
-        // Update existing token price/change or add new one
-        const existingToken = updatedTokens.get(token.address);
-        // Fix: `existingToken` can be `undefined`, which cannot be spread. A truthiness check acts as a type guard, ensuring it's a `Token` object before use.
-        if (existingToken) {
+        // FIX: Spreading 'existingToken' when it is 'undefined' causes a "Spread types may only be created from object types" error.
+        // Using `has` to check for the token's existence before getting and spreading it prevents this runtime error.
+        if (updatedTokens.has(token.address)) {
+          // We can safely use the non-null assertion operator (!) because we've confirmed the key exists.
+          const existingToken = updatedTokens.get(token.address)!;
           updatedTokens.set(token.address, { ...existingToken, ...token });
         } else {
           updatedTokens.set(token.address, token);

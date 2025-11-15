@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import Panel from './Panel';
 import { Token } from '../types';
 
@@ -46,6 +46,29 @@ const NeuralIndex: React.FC<NeuralIndexProps> = ({ tokens, onTokenSelect }) => {
       try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+        const responseSchema = {
+          type: Type.OBJECT,
+          properties: {
+            tokenAddress: { 
+              type: Type.STRING,
+              description: "The address of the selected token."
+            },
+            confidence: { 
+              type: Type.NUMBER,
+              description: "A score from 0 to 100 representing confidence in this token's potential."
+            },
+            trend: { 
+              type: Type.STRING,
+              description: "A short, descriptive label for the potential trend (e.g., 'Strong Momentum')."
+            },
+            summary: { 
+              type: Type.STRING,
+              description: "A single, compelling sentence explaining why this token is the pick."
+            },
+          },
+          required: ['tokenAddress', 'confidence', 'trend', 'summary'],
+        };
+
         const tokenDataString = tokens.map(t => 
             `- ${t.name} ($${t.ticker}): Price $${t.price.toPrecision(4)}, 24h Change ${t.change24h.toFixed(2)}%, Address: ${t.address}`
         ).join('\n');
@@ -56,27 +79,19 @@ Your task is to analyze the following list of recently active tokens. Based on t
 Token Data:
 ${tokenDataString}
 
-Your analysis must be concise and actionable. Return ONLY a single JSON object with the following structure. Do not include any other text, markdown, or explanations.
-
-{
-  "tokenAddress": "The address of the token you selected",
-  "confidence": "A score from 0 to 100 representing your confidence in this token's potential. A score below 50 indicates high risk, 50-75 is speculative but interesting, and above 75 is a high-conviction pick.",
-  "trend": "A short, descriptive label for the potential trend (e.g., 'Strong Momentum', 'Potential Narrative Shift', 'High Risk Meme Play', 'Reversal Candidate').",
-  "summary": "A single, compelling sentence explaining *why* this token is your pick. Be specific and insightful."
-}`;
+Analyze the data and select the single best token, providing your confidence, the trend, and a summary.`;
         
         const response = await ai.models.generateContent({
           model: "gemini-2.5-flash",
           contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: responseSchema,
+          },
         });
 
         const rawText = response.text;
-        const jsonStartIndex = rawText.indexOf('{');
-        const jsonEndIndex = rawText.lastIndexOf('}');
-        if (jsonStartIndex === -1 || jsonEndIndex === -1) throw new Error("AI response did not contain valid JSON.");
-        const jsonString = rawText.substring(jsonStartIndex, jsonEndIndex + 1);
-        
-        const result: AIPrediction = JSON.parse(jsonString);
+        const result: AIPrediction = JSON.parse(rawText);
         
         const foundToken = tokens.find(t => t.address === result.tokenAddress);
 

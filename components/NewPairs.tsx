@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Token, JupiterToken, JupiterV3PriceResponse } from '../types';
 import Panel from './Panel';
 
@@ -24,12 +24,16 @@ const timeSince = (isoDate: string): string => {
 interface TokenRowProps {
   token: Token;
   onSelect: (token: Token) => void;
+  isNew: boolean;
 }
 
-const TokenRow: React.FC<TokenRowProps> = ({ token, onSelect }) => {
+const TokenRow: React.FC<TokenRowProps> = ({ token, onSelect, isNew }) => {
   return (
     <tr 
-      className="border-b border-eve-border/50 last:border-b-0 hover:bg-eve-border/20 cursor-pointer transition-colors duration-200"
+      className={`
+        border-b border-eve-border/50 last:border-b-0 hover:bg-eve-border/20 cursor-pointer transition-all duration-500
+        ${isNew ? 'animate-shake bg-yellow-500/10 border-l-2 border-l-yellow-400' : 'border-l-2 border-l-transparent'}
+      `}
       onClick={() => onSelect(token)}
     >
       <td className="p-2">
@@ -86,12 +90,13 @@ interface NewPairsProps {
 
 const NewPairs: React.FC<NewPairsProps> = ({ onTokenSelect, onDataFetched }) => {
   const [tokens, setTokens] = useState<Token[]>([]);
+  const [newTokens, setNewTokens] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const prevTokenAddressesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchData = async () => {
-      // Don't show loading on refetch
       if (tokens.length === 0) setIsLoading(true);
       setError(null);
       try {
@@ -121,7 +126,6 @@ const NewPairs: React.FC<NewPairsProps> = ({ onTokenSelect, onDataFetched }) => 
           })
           .filter((token): token is Token => token !== null);
 
-        // Identify tokens that are missing a price
         const tokensWithoutPrice = initialTokens.filter(t => t.price === 0);
         if (tokensWithoutPrice.length > 0) {
             const idsToFetch = tokensWithoutPrice.map(t => t.address).join(',');
@@ -137,6 +141,18 @@ const NewPairs: React.FC<NewPairsProps> = ({ onTokenSelect, onDataFetched }) => 
             }
         }
         
+        const currentTokenAddresses = new Set(initialTokens.map(t => t.address));
+        // Only highlight new tokens on subsequent fetches, not the initial load
+        if (prevTokenAddressesRef.current.size > 0) {
+            const newlyAdded = new Set([...currentTokenAddresses].filter(addr => !prevTokenAddressesRef.current.has(addr)));
+            if (newlyAdded.size > 0) {
+                setNewTokens(newlyAdded);
+                // Clear the highlight after a few seconds
+                setTimeout(() => setNewTokens(new Set()), 5000);
+            }
+        }
+        prevTokenAddressesRef.current = currentTokenAddresses;
+
         setTokens(initialTokens);
         onDataFetched(initialTokens);
 
@@ -151,7 +167,7 @@ const NewPairs: React.FC<NewPairsProps> = ({ onTokenSelect, onDataFetched }) => 
     fetchData();
      const interval = setInterval(fetchData, 2 * 60 * 1000); // Refresh every 2 minutes
     return () => clearInterval(interval);
-  }, [onDataFetched]);
+  }, [onDataFetched, tokens.length]);
 
 
   return (
@@ -176,7 +192,12 @@ const NewPairs: React.FC<NewPairsProps> = ({ onTokenSelect, onDataFetched }) => 
               </tr>
             ) : (
               tokens.map(token => (
-                <TokenRow key={token.pairAddress} token={token} onSelect={onTokenSelect} />
+                <TokenRow 
+                    key={token.pairAddress} 
+                    token={token} 
+                    onSelect={onTokenSelect} 
+                    isNew={newTokens.has(token.address)}
+                />
               ))
             )}
           </tbody>
