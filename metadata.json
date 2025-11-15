@@ -1,0 +1,5 @@
+{
+  "name": "EVE Protocol Terminal",
+  "description": "An AI-driven prediction and analysis terminal for the Solana ecosystem. It provides insights into market sentiment, trending tokens, and narrative shifts by decoding on-chain and social data.",
+  "requestFramePermissions": []
+}
